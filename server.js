@@ -1,7 +1,8 @@
 // net module (TCP서버를 만들어주는 친구)
 import net from 'net';
 import { readHeader, writeHeader } from './utils.js';
-import { HANDLER_ID, TOTAL_LENGTH_SIZE } from './constants.js';
+import { HANDLER_ID, MAX_MESSAGE_LENGTH, TOTAL_LENGTH_SIZE } from './constants.js';
+import handlers from './handlers/index.js';
 
 const PORT = 5555;
 
@@ -16,10 +17,27 @@ const server = net.createServer((socket) => {
         console.log(`handlerId: ${handlerId}`);
         console.log(`length: ${length}`);
 
+        // 메시지 길이 확인하기
+        if (length > MAX_MESSAGE_LENGTH) {
+            console.error(`에러: 메시지 길이 ${length}가 최대 ${MAX_MESSAGE_LENGTH}를 초과합니다.`);
+            socket.write('에러: 메시지의 길이가 너무 깁니다.');
+            socket.end();
+            return;
+        }
+
+        const handler = handlers[handlerId];
+
+        // 핸들러 ID 확인하기
+        if (!handlers[handlerId]) {
+            console.error(`에러: 해당 핸들러 ID를 찾을 수 없습니다. : ${handlerId}`);
+            socket.write(`에러: 유효하지 않은 핸들러 ID입니다. : ${handlerId}`);
+            socket.end();
+            return;
+        }
+
         const headerSize = TOTAL_LENGTH_SIZE + HANDLER_ID;
         //  메시지를 추출합니다.
         const message = buffer.slice(headerSize);
-
         console.log(`클라이언트로부터 받은 메시지: ${message}`);
 
         const responseMessage = 'Hi! There';
